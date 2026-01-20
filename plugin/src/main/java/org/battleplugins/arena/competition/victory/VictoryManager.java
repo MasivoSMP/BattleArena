@@ -29,6 +29,7 @@ public class VictoryManager<T extends Competition<T>> implements ArenaListener, 
     private final T competition;
 
     private boolean closed = false;
+    private boolean active = false;
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
     public VictoryManager(Arena arena, T competition) {
@@ -86,6 +87,7 @@ public class VictoryManager<T extends Competition<T>> implements ArenaListener, 
      */
     public void end(boolean closed) {
         this.closed = closed;
+        this.active = false;
 
         for (VictoryCondition<?> condition : this.victoryConditions.values()) {
             condition.end();
@@ -101,11 +103,17 @@ public class VictoryManager<T extends Competition<T>> implements ArenaListener, 
 
     @ArenaEventHandler
     public void onPhaseStart(ArenaPhaseStartEvent event) {
+        if (this.active) {
+            return;
+        }
+
         if (CompetitionPhaseType.VICTORY.equals(event.getPhase().getNextPhase())) {
             // Start the victory conditions
             for (VictoryCondition<?> condition : this.victoryConditions.values()) {
                 condition.start();
             }
+
+            this.active = true;
         }
     }
 
