@@ -2,6 +2,7 @@ package org.battleplugins.arena.competition.phase;
 
 import org.battleplugins.arena.competition.Competition;
 import org.battleplugins.arena.competition.phase.phases.CountdownPhase;
+import org.battleplugins.arena.competition.phase.phases.EndEventPhase;
 import org.battleplugins.arena.competition.phase.phases.IngamePhase;
 import org.battleplugins.arena.competition.phase.phases.VictoryPhase;
 import org.battleplugins.arena.competition.phase.phases.WaitingPhase;
@@ -26,6 +27,7 @@ public final class CompetitionPhaseType<C extends Competition<C>, T extends Comp
     public static final CompetitionPhaseType<?, CountdownPhase<?>> COUNTDOWN = new CompetitionPhaseType("countdown", CountdownPhase.class);
     public static final CompetitionPhaseType<?, IngamePhase<?>> INGAME = new CompetitionPhaseType("ingame", IngamePhase.class);
     public static final CompetitionPhaseType<?, VictoryPhase<?>> VICTORY = new CompetitionPhaseType("victory", VictoryPhase.class);
+    public static final CompetitionPhaseType<?, EndEventPhase<?>> END_EVENT = new CompetitionPhaseType("end-event", EndEventPhase.class);
 
     private final String name;
     private final Class<T> clazz;

@@ -4,6 +4,7 @@ import org.battleplugins.arena.Arena;
 import org.battleplugins.arena.ArenaPlayer;
 import org.battleplugins.arena.competition.map.MapType;
 import org.battleplugins.arena.competition.phase.phases.VictoryPhase;
+import org.battleplugins.arena.competition.PlayerDisconnectState;
 import org.battleplugins.arena.event.ArenaEventHandler;
 import org.battleplugins.arena.event.ArenaListener;
 import org.battleplugins.arena.event.arena.ArenaPhaseCompleteEvent;
@@ -55,6 +56,11 @@ class CompetitionListener<T extends Competition<T>> implements ArenaListener, Co
     @ArenaEventHandler(priority = EventPriority.HIGHEST)
     public void onQuit(PlayerQuitEvent event, ArenaPlayer player) {
         player.getStorage().markDisconnected();
+        PlayerDisconnectState disconnectState = player.getMetadata(PlayerDisconnectState.class);
+        if (disconnectState != null && disconnectState.keepInCompetition()) {
+            return;
+        }
+
         player.getCompetition().leave(player, ArenaLeaveEvent.Cause.DISCONNECT);
     }
 

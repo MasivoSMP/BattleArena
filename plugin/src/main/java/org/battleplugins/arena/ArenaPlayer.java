@@ -30,7 +30,7 @@ import java.util.function.Function;
 public class ArenaPlayer implements StatHolder, Resolvable {
     private static final String ARENA_PLAYER_META_KEY = "arena-player";
 
-    private final Player player;
+    private Player player;
     private final Arena arena;
     private final LiveCompetition<?> competition;
 
@@ -66,6 +66,21 @@ public class ArenaPlayer implements StatHolder, Resolvable {
      */
     public Player getPlayer() {
         return this.player;
+    }
+
+    /**
+     * Updates the backing {@link Player} for this arena player.
+     *
+     * @param player the new player instance
+     */
+    public void updatePlayer(Player player) {
+        if (this.player.equals(player)) {
+            return;
+        }
+
+        this.removeMetadata();
+        this.player = player;
+        this.setMetadata();
     }
 
     /**

@@ -18,6 +18,24 @@ Active games in BattleArena are referred to as Competitions. BattleArena nativel
 - Deathmatch: A 2-minute event where if you die you respawn. The player with the highest number of kills wins.
 - Tournament: Bracket tournament for any number of teams.
 
+## End Event Phase
+For events that should fully stop instead of resetting back to waiting, use the `end-event` phase as the next phase and add a matching phase block:
+```yaml
+victory:
+  next-phase: end-event
+
+end-event:
+  allow-join: false
+  allow-spectate: false
+```
+This behaves like `battlearena stop <event>` and removes the event competition.
+
+## PvPManager Integration Module
+- Module key: `pvpmanager-integration`
+- Tags all participants when the ingame phase starts; late joiners are tagged on entry.
+- Disconnects during ingame keep participants alive; disqualification happens only if their PvPManager combat-log NPC dies.
+- Combat tags are cleared when a participant leaves/eliminates or when the ingame phase ends.
+
 ## For Developers
 BattleArena is designed to be easily extendable. You can create your own modes, events, and even competitions. You can also create your own commands and listeners to handle events in your own way.
 

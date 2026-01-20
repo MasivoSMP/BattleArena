@@ -282,6 +282,23 @@ public class LiveCompetition<T extends Competition<T>> implements ArenaLike, Com
     }
 
     /**
+     * Rebinds an existing {@link ArenaPlayer} to a new {@link Player} instance.
+     *
+     * @param arenaPlayer the arena player to rebind
+     * @param player the new player instance
+     */
+    public final void reconnect(ArenaPlayer arenaPlayer, Player player) {
+        Player previous = arenaPlayer.getPlayer();
+        if (previous.equals(player)) {
+            return;
+        }
+
+        this.players.remove(previous);
+        arenaPlayer.updatePlayer(player);
+        this.players.put(player, arenaPlayer);
+    }
+
+    /**
      * Changes the role of the player to the specified role.
      *
      * @param player the player to change the role of

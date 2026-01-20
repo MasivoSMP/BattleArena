@@ -307,6 +307,10 @@ public class PlayerStorage {
         this.disconnected = true;
     }
 
+    public void markReconnected() {
+        this.disconnected = false;
+    }
+
     /**
      * The different types of data that can be stored/restored.
      */
