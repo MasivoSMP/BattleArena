@@ -11,6 +11,7 @@ import org.battleplugins.arena.event.arena.ArenaCreateCompetitionEvent;
 import org.battleplugins.arena.event.arena.ArenaRemoveCompetitionEvent;
 import org.battleplugins.arena.event.player.ArenaLeaveEvent;
 import org.bukkit.Bukkit;
+import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.Nullable;
 
@@ -26,10 +27,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Stream;
 
 public class CompetitionManager {
+    private static final long DYNAMIC_MAP_CLEANUP_RETRY_TICKS = 20L;
+    private static final int DYNAMIC_MAP_CLEANUP_MAX_ATTEMPTS = 300;
+
     private final Map<Arena, List<Competition<?>>> competitions = new HashMap<>();
+    private final Set<String> pendingDynamicMapCleanup = ConcurrentHashMap.newKeySet();
 
     private final BattleArena plugin;
 
@@ -235,19 +241,75 @@ public class CompetitionManager {
             return;
         }
 
-        Bukkit.unloadWorld(map.getWorld(), false);
-        if (!map.getWorld().getWorldFolder().exists()) {
+        World world = map.getWorld();
+        if (world == null) {
             return;
         }
 
-        try {
-            try (Stream<Path> pathsToDelete = Files.walk(map.getWorld().getWorldFolder().toPath())) {
-                for (Path path : pathsToDelete.sorted(Comparator.reverseOrder()).toList()) {
-                    Files.deleteIfExists(path);
-                }
-            }
-        } catch (IOException e) {
-            this.plugin.error("Failed to delete dynamic map {}", map.getName(), e);
+        String worldName = world.getName();
+        if (!this.pendingDynamicMapCleanup.add(worldName)) {
+            return;
         }
+
+        this.clearDynamicMap(worldName, world.getWorldFolder().toPath(), map.getName(), DYNAMIC_MAP_CLEANUP_MAX_ATTEMPTS);
+    }
+
+    private void clearDynamicMap(String worldName, Path worldPath, String mapName, int attemptsRemaining) {
+        if (Bukkit.isStopping()) {
+            this.pendingDynamicMapCleanup.remove(worldName);
+            return;
+        }
+
+        World world = Bukkit.getWorld(worldName);
+        if (world != null) {
+            if (!world.getPlayers().isEmpty()) {
+                this.retryDynamicMapCleanup(worldName, worldPath, mapName, attemptsRemaining, "players are still in the world");
+                return;
+            }
+
+            boolean unloaded = Bukkit.unloadWorld(world, false);
+            if (!unloaded || Bukkit.getWorld(worldName) != null) {
+                this.retryDynamicMapCleanup(worldName, worldPath, mapName, attemptsRemaining, "world unload failed");
+                return;
+            }
+        }
+
+        if (!Files.exists(worldPath)) {
+            this.pendingDynamicMapCleanup.remove(worldName);
+            return;
+        }
+
+        try (Stream<Path> pathsToDelete = Files.walk(worldPath)) {
+            for (Path path : pathsToDelete.sorted(Comparator.reverseOrder()).toList()) {
+                Files.deleteIfExists(path);
+            }
+            this.pendingDynamicMapCleanup.remove(worldName);
+        } catch (IOException e) {
+            if (attemptsRemaining <= 0) {
+                this.pendingDynamicMapCleanup.remove(worldName);
+                this.plugin.error("Failed to delete dynamic map {} after retries", mapName, e);
+                return;
+            }
+
+            Bukkit.getScheduler().runTaskLater(
+                    this.plugin,
+                    () -> this.clearDynamicMap(worldName, worldPath, mapName, attemptsRemaining - 1),
+                    DYNAMIC_MAP_CLEANUP_RETRY_TICKS
+            );
+        }
+    }
+
+    private void retryDynamicMapCleanup(String worldName, Path worldPath, String mapName, int attemptsRemaining, String reason) {
+        if (attemptsRemaining <= 0) {
+            this.pendingDynamicMapCleanup.remove(worldName);
+            this.plugin.warn("Failed to clear dynamic map {} (world {}) after retries: {}", mapName, worldName, reason);
+            return;
+        }
+
+        Bukkit.getScheduler().runTaskLater(
+                this.plugin,
+                () -> this.clearDynamicMap(worldName, worldPath, mapName, attemptsRemaining - 1),
+                DYNAMIC_MAP_CLEANUP_RETRY_TICKS
+        );
     }
 }
